@@ -1,0 +1,17 @@
+cabal-version: 2.4
+name: receipt-crud
+version: 0.1.0.0
+
+executable receipt-crud
+  main-is: Main.hs
+  other-modules:
+   Handler,
+   Bar
+  build-depends:
+      base >= 4.14 && < 5
+    , aeson
+    , containers
+    , http-types
+    , scotty >= 0.21 && < 0.31
+  default-language: Haskell2010
+  ghc-options: -threaded -rtsopts "-with-rtsopts=-N"
