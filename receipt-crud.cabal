@@ -15,3 +15,15 @@ executable receipt-crud
     , scotty >= 0.21 && < 0.31
   default-language: Haskell2010
   ghc-options: -threaded -rtsopts "-with-rtsopts=-N"
+
+executable ynab-plans
+  main-is: YnabPlans.hs
+  build-depends:
+      base >= 4.14 && < 5
+    , bytestring
+    , dotenv
+    , http-client
+    , http-client-tls
+    , http-types
+  default-language: Haskell2010
+  ghc-options: -threaded -rtsopts "-with-rtsopts=-N"
