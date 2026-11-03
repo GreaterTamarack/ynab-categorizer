@@ -1,3 +1,4 @@
 /dist-newstyle
+/var
 .env
-
+.cursor

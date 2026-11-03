@@ -1,0 +1,40 @@
+# Vendor knowledge for the categorizer. Category names must match YNAB
+# (use "Group/Name" if a name appears in more than one group).
+#
+# minAmount and maxAmount are inclusive dollar prices. Matching uses the
+# absolute amount, since YNAB outflows are negative. The first matching
+# rule wins. Omit a bound to leave that side open.
+#
+# hints:
+#   - "Venmo payments are usually splitting restaurant bills with friends."
+# rules:
+#   - payeeContains: "COSTCO"
+#     category: "Groceries"
+#     note: "Occasionally household supplies."
+#   - payeeRegex: "^SHELL|^CHEVRON"
+#     category: "Gas"
+
+hints: []
+rules:
+  - payeeContains: "KROGER"
+    minAmount: 40
+    maxAmount: 60
+    category: "Needs/🚘 Gas"
+    note: "Kroger charges from $40 to $60 are often gas."
+  - payeeContains: "KROGER"
+    minAmount: 150
+    category: "Needs/🛒 Groceries"
+    note: "Around $150 or more is usually the weekly grocery run."
+  # 39.999 is the largest YNAB amount below $40.
+  - payeeContains: "KROGER"
+    maxAmount: 39.999
+    category: "Wants/Family Spending"
+    note: "Kroger charges under $40 are more often family spending."
+  # 60.001 and 149.999 keep $60 on Gas and $150 on Groceries.
+  - payeeContains: "KROGER"
+    minAmount: 60.001
+    maxAmount: 149.999
+    category: "Wants/Family Spending"
+    note: "From just over $60 up to just under $150, more often family spending."
+excludeCategories:
+  - "Credit Card Payments/*"

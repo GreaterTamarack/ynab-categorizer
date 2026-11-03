@@ -1,0 +1,91 @@
+cabal-version: 2.4
+name: ynab-categorizer
+version: 0.1.0.0
+
+common shared
+  default-language: GHC2021
+  default-extensions:
+    OverloadedStrings
+  ghc-options: -Wall
+
+common exe-opts
+  ghc-options: -threaded -rtsopts "-with-rtsopts=-N"
+
+library
+  import: shared
+  hs-source-dirs: src
+  exposed-modules:
+      App
+      Application
+      Categorize
+      Config
+      Handler.Categories
+      Handler.Health
+      Handler.Runs
+      Llm.Categorizer
+      Llm.Claude
+      Rules
+      Run
+      Ynab.Client
+      Ynab.Types
+  build-depends:
+      base >= 4.14 && < 5
+    , aeson
+    , bytestring
+    , containers
+    , dotenv
+    , http-client
+    , http-client-tls
+    , http-types
+    , regex-tdfa
+    , scientific
+    , template-haskell
+    , text
+    , warp
+    , yaml
+    , yesod-core >= 1.6 && < 1.7
+  default-extensions:
+    OverloadedStrings
+    QuasiQuotes
+    TemplateHaskell
+    TypeFamilies
+    ViewPatterns
+
+executable ynab-categorizer
+  import: shared, exe-opts
+  hs-source-dirs: app
+  main-is: Main.hs
+  build-depends:
+      base >= 4.14 && < 5
+    , ynab-categorizer
+
+executable ynab-plans
+  import: shared, exe-opts
+  hs-source-dirs: app
+  main-is: YnabPlans.hs
+  build-depends:
+      base >= 4.14 && < 5
+    , bytestring
+    , dotenv
+    , http-client
+    , http-client-tls
+    , http-types
+
+test-suite spec
+  import: shared, exe-opts
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: Spec.hs
+  other-modules:
+      CategorizeSpec
+      JsonSpec
+      RulesSpec
+  build-depends:
+      base >= 4.14 && < 5
+    , aeson
+    , bytestring
+    , containers
+    , hspec
+    , ynab-categorizer
+    , text
+    , yaml
