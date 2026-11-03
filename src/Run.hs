@@ -16,10 +16,12 @@ import Categorize
   , decideOne
   )
 import Config (Config (..))
+import Control.Monad (forM_)
 import Data.Aeson (ToJSON (..), object, (.=))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Text (Text)
+import qualified Data.Text as T
 import Llm.Categorizer
   ( CategorizeRequest (..)
   , Categorizer (..)
@@ -36,7 +38,7 @@ import Rules
   , candidateCategories
   , matchRule
   )
-import Ynab.Client (YnabError, listCategories, listUnapproved, patchTransactions, ynabErrorText)
+import Ynab.Client (YnabError, listCategories, listUncategorized, patchTransactions, ynabErrorText)
 import Ynab.Types
   ( CategoryId
   , FlagColor
@@ -142,11 +144,12 @@ instance ToJSON RunError where
 
 executeRun :: Manager -> Config -> Rules -> Categorizer -> RunRequest -> IO (Either RunError RunReport)
 executeRun manager cfg rules categorizer request = do
+  putStrLn $ "[run] plan id " <> T.unpack (cfgYnabPlanId cfg)
   groupsResult <- listCategories manager cfg
   case groupsResult of
     Left err -> pure (Left (RunYnab err))
     Right groups -> do
-      txResult <- listUnapproved manager cfg (rrSinceDate request)
+      txResult <- listUncategorized manager cfg (rrSinceDate request)
       case txResult of
         Left err -> pure (Left (RunYnab err))
         Right txs -> complete groups txs
@@ -184,11 +187,24 @@ executeRun manager cfg rules categorizer request = do
 
     applyDecisions settings cats prepared suggestions = do
       let byId = Map.fromList [(sTransactionId s, s) | s <- suggestions]
-          decisions =
-            [ decideOne settings cats matched tx (Map.lookup (txId tx) byId)
+          withSuggestions =
+            [ (tx, matched, Map.lookup (txId tx) byId)
             | (_, (tx, matched)) <- prepared
             ]
+          decisions =
+            [ decideOne settings cats matched tx mSug
+            | (tx, matched, mSug) <- withSuggestions
+            ]
           report = buildReport cfg request decisions
+      forM_ withSuggestions $ \(tx, _, mSug) ->
+        putStrLn
+          ( "[suggestion] "
+              <> T.unpack (txId tx)
+              <> " "
+              <> T.unpack (payeeLabel tx)
+              <> ": "
+              <> show mSug
+          )
       if rrApply request
         then do
           patchResult <- patchTransactions manager cfg (map decisionPatch decisions)

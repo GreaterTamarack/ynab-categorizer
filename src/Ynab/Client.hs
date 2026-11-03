@@ -2,7 +2,7 @@ module Ynab.Client
   ( YnabError (..)
   , ynabErrorText
   , listCategories
-  , listUnapproved
+  , listUncategorized
   , patchTransactions
   ) where
 
@@ -18,13 +18,18 @@ import Network.HTTP.Client
   ( Manager
   , Request
   , RequestBody (..)
+  , host
   , httpLbs
   , method
   , parseRequest
+  , path
+  , port
+  , queryString
   , requestBody
   , requestHeaders
   , responseBody
   , responseStatus
+  , secure
   , setQueryString
   )
 import Network.HTTP.Types (hAuthorization, hContentType, statusCode)
@@ -71,11 +76,11 @@ listCategories manager cfg = do
       Just env -> Right (ceGroups env)
       Nothing -> Left (YnabError 200 body)
 
-listUnapproved :: Manager -> Config -> Maybe Text -> IO (Either YnabError [YnabTransaction])
-listUnapproved manager cfg mSince = do
+listUncategorized :: Manager -> Config -> Maybe Text -> IO (Either YnabError [YnabTransaction])
+listUncategorized manager cfg mSince = do
   req0 <- parseRequest $ base cfg <> "/transactions"
   let qs =
-        ("type", Just "unapproved")
+        ("type", Just "uncategorized")
           : maybe [] (\d -> [("since_date", Just (encodeUtf8 d))]) mSince
       req = setQueryString qs req0
   perform manager (authorize cfg req) $ \body ->
@@ -83,7 +88,7 @@ listUnapproved manager cfg mSince = do
       Just env -> Right (filter keep (teTransactions env))
       Nothing -> Left (YnabError 200 body)
   where
-    keep tx = not (txDeleted tx) && not (txApproved tx)
+    keep tx = not (txDeleted tx)
 
 patchTransactions :: Manager -> Config -> [TransactionPatch] -> IO (Either YnabError ())
 patchTransactions _ _ [] = pure (Right ())
@@ -117,6 +122,37 @@ perform manager req parse = do
   response <- httpLbs req manager
   let code = statusCode (responseStatus response)
       body = responseBody response
+  logExchange req code body
   if code >= 200 && code < 300
     then pure (parse body)
     else pure (Left (YnabError code body))
+
+logExchange :: Request -> Int -> LBS.ByteString -> IO ()
+logExchange req code body = do
+  putStrLn $ "[ynab] " <> BS8.unpack (method req) <> " " <> requestUrl req
+  putStrLn "[ynab] request body:"
+  putStrLn (renderBody (requestBody req))
+  putStrLn $ "[ynab] response " <> show code <> ":"
+  putStrLn (LBS8.unpack body)
+
+requestUrl :: Request -> String
+requestUrl req =
+  let scheme = if secure req then "https://" else "http://"
+      hostName = BS8.unpack (host req)
+      portNumber = port req
+      defaultPort = if secure req then 443 else 80
+      portPart = if portNumber == defaultPort then "" else ":" <> show portNumber
+   in scheme
+        <> hostName
+        <> portPart
+        <> BS8.unpack (path req)
+        <> BS8.unpack (queryString req)
+
+renderBody :: RequestBody -> String
+renderBody (RequestBodyLBS bytes)
+  | LBS.null bytes = "(empty)"
+  | otherwise = LBS8.unpack bytes
+renderBody (RequestBodyBS bytes)
+  | BS8.null bytes = "(empty)"
+  | otherwise = BS8.unpack bytes
+renderBody _ = "(body not logged)"

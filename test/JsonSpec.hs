@@ -24,7 +24,7 @@ spec = do
           expectationFailure ("unexpected groups: " <> show (length groups))
         Nothing -> expectationFailure "failed to parse categories envelope"
 
-    it "parses an unapproved transaction" $ do
+    it "parses an uncategorized transaction" $ do
       case decode transactionJson of
         Just tx -> do
           txId tx `shouldBe` "tx1"
