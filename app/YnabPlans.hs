@@ -23,7 +23,6 @@ main = do
   LBS.putStr body
   LBS.putStr "\n"
 
--- GET /v1/plans. A real environment variable wins over .env.
 fetchPlans :: IO LBS.ByteString
 fetchPlans = do
   onMissingFile (loadFile defaultConfig) (pure ())
